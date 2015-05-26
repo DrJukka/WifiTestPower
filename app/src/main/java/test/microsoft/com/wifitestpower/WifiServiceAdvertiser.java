@@ -16,25 +16,31 @@ public class WifiServiceAdvertiser {
     private WifiP2pManager p2p;
     private WifiP2pManager.Channel channel;
 
+    int lastError = -1;
     public WifiServiceAdvertiser(WifiP2pManager Manager, WifiP2pManager.Channel Channel) {
         this.p2p = Manager;
         this.channel = Channel;
     }
 
-    public void Start(String instance) {
+    public int GetLastError(){
+        return lastError;
+    }
+    public void Start(String instance,String service_type) {
 
         Map<String, String> record = new HashMap<String, String>();
         record.put("available", "visible");
 
-        WifiP2pDnsSdServiceInfo service = WifiP2pDnsSdServiceInfo.newInstance(instance, WifiBase.SERVICE_TYPE, record);
+        WifiP2pDnsSdServiceInfo service = WifiP2pDnsSdServiceInfo.newInstance(instance, service_type, record);
 
         debug_print("Add local service :" + instance);
         p2p.addLocalService(channel, service, new WifiP2pManager.ActionListener() {
             public void onSuccess() {
+                lastError = -1;
                 debug_print("Added local service");
             }
 
             public void onFailure(int reason) {
+                lastError = reason;
                 debug_print("Adding local service failed, error code " + reason);
             }
         });
@@ -43,10 +49,12 @@ public class WifiServiceAdvertiser {
     public void Stop() {
         p2p.clearLocalServices(channel, new WifiP2pManager.ActionListener() {
             public void onSuccess() {
+                lastError = -1;
                 debug_print("Cleared local services");
             }
 
             public void onFailure(int reason) {
+                lastError = reason;
                 debug_print("Clearing local services failed, error code " + reason);
             }
         });

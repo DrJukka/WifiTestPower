@@ -17,8 +17,8 @@ import java.io.OutputStream;
  */
 public class TestDataFile {
 
-    private final String fileNameStart = "PTestTime";
-    private final String firstLine= "Os ,time ,battery ,Started ,got ,No services ,Peer err ,Service Err ,Add req Err ,reset counter,Peers changed, discovery stopped\n";
+    private final String fileNameStart = "PowWithDelay";
+    private final String firstLine= "Os ,time ,battery ,Started ,got ,No services ,Peer err ,Service Err ,Add req Err ,reset counter,Peers changed, discovery stopped, wait expired, wifi reset \n";
 
 
     private File dbgFile;
@@ -57,7 +57,7 @@ public class TestDataFile {
         }
     }
 
-    public void WriteDebugline(int battery, long Started , long got , long Noservices ,long Peererr ,long ServiceErr , long AddreqErr ,long  resetcounter,long  PeerChangedEventCount,long  PeerDiscoveryStoppedCount) {
+    public void WriteDebugline(int battery, long Started , long got , long Noservices ,long Peererr ,long ServiceErr , long AddreqErr ,long  resetcounter,long  PeerChangedEventCount,long  PeerDiscoveryStoppedCount, long WaitTimeExpiredCount, long WifiCounterCount) {
 
         //"Os ,time ,battery ,Started ,got ,No services ,Peer err ,Service Err ,Add req Err ,reset counter \n";
 
@@ -73,7 +73,9 @@ public class TestDataFile {
             dbgData = dbgData + AddreqErr + " ,";
             dbgData = dbgData + resetcounter + " ,";
             dbgData = dbgData + PeerChangedEventCount + " ,";
-            dbgData = dbgData + PeerDiscoveryStoppedCount + " \n";
+            dbgData = dbgData + PeerDiscoveryStoppedCount + " ,";
+            dbgData = dbgData + WaitTimeExpiredCount + " ,";
+            dbgData = dbgData + WifiCounterCount + " \n";
 
             Log.d("FILE", "write: " + dbgData);
             dbgFileOs.write(dbgData.getBytes());

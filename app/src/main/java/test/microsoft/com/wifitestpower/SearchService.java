@@ -1,7 +1,6 @@
 package test.microsoft.com.wifitestpower;
 
 import android.app.Service;
-import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -11,13 +10,8 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.os.BatteryManager;
 import android.os.Binder;
 import android.os.CountDownTimer;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
-import android.provider.SyncStateContract;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
-import android.widget.TextView;
 
 import java.util.Collection;
 import java.util.List;
@@ -44,6 +38,24 @@ public class SearchService extends Service implements WifiBase.WifiStatusCallBac
         }
     };
 
+
+    CountDownTimer WifiResetTimeOutTimer = new CountDownTimer(1800000, 1000) { //
+        public void onTick(long millisUntilFinished) {
+            // not using
+        }
+        public void onFinish() {
+            WifiCounterCount = WifiCounterCount + 1;
+            //Restart service discovery
+            //startServices();
+
+            //switch off Wlan :)
+            if(mWifiBase != null) {
+                ITurnedWifiOff = true;
+                mWifiBase.setWifiEnabled(false);
+            }
+        }
+    };
+
     // 20 minute timer
     CountDownTimer SaveDataTimeOutTimer = new CountDownTimer(1200000, 1000) {
         public void onTick(long millisUntilFinished) {
@@ -52,12 +64,15 @@ public class SearchService extends Service implements WifiBase.WifiStatusCallBac
         public void onFinish() {
             if (mTestDataFile != null) {
                 //long Started , long got , long Noservices ,long Peererr ,long ServiceErr , long AddreqErr ,long  resetcounter) {
-                mTestDataFile.WriteDebugline(lastChargePercent,peersFoundCount,fullRoundCount,noServicesCount,PeerErrorCount,ServErrorCount,AddRErrorCount,ResetCounterCount,PeerChangedEventCount,PeerDiscoveryStoppedCount);
+                mTestDataFile.WriteDebugline(lastChargePercent,peersFoundCount,fullRoundCount,noServicesCount,PeerErrorCount,ServErrorCount,AddRErrorCount,ResetCounterCount,PeerChangedEventCount,PeerDiscoveryStoppedCount,WaitTimeExpiredCount,WifiCounterCount);
             }
             SaveDataTimeOutTimer.start();
         }
     };
 
+    Boolean ITurnedWifiOff = false;
+
+    long WifiCounterCount = 0;
     long PeerErrorCount = 0;
     long ServErrorCount = 0;
     long AddRErrorCount = 0;
@@ -67,6 +82,7 @@ public class SearchService extends Service implements WifiBase.WifiStatusCallBac
     long noServicesCount = 0;
     long PeerChangedEventCount = 0;
     long PeerDiscoveryStoppedCount = 0;
+    long WaitTimeExpiredCount = 0;
 
     String latsDbgString = "";
     WifiBase mWifiBase = null;
@@ -90,6 +106,12 @@ public class SearchService extends Service implements WifiBase.WifiStatusCallBac
             //no wifi availavble, thus we need to stop doing anything;
             print_line("WB", "Wifi is DISABLEd !!");
             stopServices();
+
+            if(mWifiBase != null && ITurnedWifiOff) {
+                WifiResetTimeOutTimer.start();
+                ITurnedWifiOff = false;
+                mWifiBase.setWifiEnabled(true);
+            }
         }
     }
 
@@ -117,6 +139,8 @@ public class SearchService extends Service implements WifiBase.WifiStatusCallBac
                     Intent intent = new Intent(DSS_WIFIDIRECT_VALUES);
                     intent.putExtra(DSS_WIFIDIRECT_MESSAGE, message);
                     sendBroadcast(intent);
+
+                    // testing how this would reduce the battery consumption
 
                     ServiceFoundTimeOutTimer.cancel();
                     ServiceFoundTimeOutTimer.start();
@@ -159,6 +183,9 @@ public class SearchService extends Service implements WifiBase.WifiStatusCallBac
 
     }
 
+    @Override
+    public void WaitTimeCallback() {WaitTimeExpiredCount = WaitTimeExpiredCount + 1;}
+
     public class MyLocalBinder extends Binder {
         SearchService getService() {
             return SearchService.this;
@@ -193,10 +220,12 @@ public class SearchService extends Service implements WifiBase.WifiStatusCallBac
         mReceiver = new PowerConnectionReceiver();
         registerReceiver(mReceiver, mfilter);
 
+        WifiResetTimeOutTimer.start();
         startServices();
     }
 
     public void Stop() {
+        WifiResetTimeOutTimer.cancel();
 
         if(mReceiver != null){
             unregisterReceiver(mReceiver);
@@ -251,6 +280,7 @@ public class SearchService extends Service implements WifiBase.WifiStatusCallBac
             mWifiServiceSearcher.Stop();
             mWifiServiceSearcher = null;
         }
+        print_line("","Services stopped");
     }
 
     private void startServices(){
@@ -268,12 +298,29 @@ public class SearchService extends Service implements WifiBase.WifiStatusCallBac
         if(channel != null && p2p != null) {
             print_line("", "Starting services");
             mWifiAccessPoint = new WifiServiceAdvertiser(p2p, channel);
-            mWifiAccessPoint.Start("powerTests");
 
-            mWifiServiceSearcher = new WifiServiceSearcher(this, p2p, channel, that);
+           // String test = getStringWithLengthAndFilledWithCharacter(99,'h');
+           // mWifiAccessPoint.Start(test, WifiBase.SERVICE_TYPE);
+
+            mWifiAccessPoint.Start("powerTests", WifiBase.SERVICE_TYPE);
+
+            mWifiServiceSearcher = new WifiServiceSearcher(this, p2p, channel, that, WifiBase.SERVICE_TYPE);
             mWifiServiceSearcher.Start();
+            print_line("", "services started");
         }
     }
+
+    protected String getStringWithLengthAndFilledWithCharacter(int length, char charToFill) {
+        char[] array = new char[length];
+        int pos = 0;
+        while (pos < length) {
+            array[pos] = charToFill;
+            pos++;
+        }
+        return new String(array);
+    }
+
+
 
     public void print_line(String who, String line) {
         latsDbgString = who + " : " + line;
@@ -285,7 +332,7 @@ public class SearchService extends Service implements WifiBase.WifiStatusCallBac
         @Override
         public void onReceive(Context context, Intent intent) {
 
-            print_line("", "Action : " + intent.getAction());
+       //     print_line("", "Action : " + intent.getAction());
 
             int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
             int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
