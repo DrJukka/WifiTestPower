@@ -15,6 +15,7 @@ import android.util.Log;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by juksilve on 6.3.2015.
@@ -159,6 +160,44 @@ public class SearchService extends Service implements WifiBase.WifiStatusCallBac
     }
 
     @Override
+    public void gotDnsTXTRecordList(Map<String, String> mapping) {
+
+        String message = "Got Txtx with: "  + mapping.size() + " item. ";
+
+        if(mapping.containsKey("0")){
+            message = message + "\n0 contains " + mapping.get("0").length() + " bytes, ";
+        }
+
+        if(mapping.containsKey("1")){
+            message = message + "\n1 contains " + mapping.get("1").length() + " bytes, ";
+        }
+
+        if(mapping.containsKey("2")){
+            message = message + "\n2 contains " + mapping.get("2").length() + " bytes, ";
+        }
+
+        if(mapping.containsKey("3")){
+            message = message + "\n3 contains " + mapping.get("3").length() + " bytes, ";
+        }
+
+        if(mapping.containsKey("4")){
+            message = message + "\n4 contains " + mapping.get("4").length() + " bytes, ";
+        }
+
+        if(mapping.containsKey("5")){
+            message = message + "\n5 contains " + mapping.get("5").length() + " bytes, ";
+        }
+
+        if(mapping.containsKey("6")){
+            message = message + "\n6 contains " + mapping.get("6").length() + " bytes, ";
+        }
+
+        Intent intent = new Intent(DSS_WIFIDIRECT_VALUES);
+        intent.putExtra(DSS_WIFIDIRECT_MESSAGE, message);
+        sendBroadcast(intent);
+    }
+
+    @Override
     public void PeerStartError(int error) {
         PeerErrorCount = PeerErrorCount + 1;
     }
@@ -213,7 +252,7 @@ public class SearchService extends Service implements WifiBase.WifiStatusCallBac
 
     public void Start() {
 
-        mTestDataFile = new TestDataFile(this);
+      //  mTestDataFile = new TestDataFile(this);
         SaveDataTimeOutTimer.start();
 
         mfilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);

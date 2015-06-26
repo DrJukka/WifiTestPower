@@ -13,8 +13,11 @@ import android.os.Handler;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import static android.net.wifi.p2p.WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION;
 
@@ -35,6 +38,7 @@ public class WifiServiceSearcher {
     private WifiP2pManager.Channel channel;
     private WifiP2pManager.DnsSdServiceResponseListener serviceListener;
     private WifiP2pManager.PeerListListener peerListListener;
+    private WifiP2pManager.DnsSdTxtRecordListener txtRecordListener;
 
     enum ServiceState{
         NONE,
@@ -190,7 +194,27 @@ public class WifiServiceSearcher {
             }
         };
 
-        p2p.setDnsSdResponseListeners(channel, serviceListener, null);
+        txtRecordListener = new WifiP2pManager.DnsSdTxtRecordListener() {
+
+            @Override
+            public void onDnsSdTxtRecordAvailable(String fullDomainName, Map<String, String> txtRecordMap, WifiP2pDevice srcDevice) {
+                debug_print(" *** TXT record *** fullname :" + fullDomainName + ", for device : " + srcDevice.deviceName);
+
+                callback.gotDnsTXTRecordList(txtRecordMap);
+
+            /*    for (Iterator iterator = txtRecordMap.keySet().iterator(); iterator.hasNext();){
+                    String key = (String) iterator.next();
+                    debug_print("** Items. " + key + " == " + txtRecordMap.get(key));
+                }*/
+
+                if(txtRecordMap.containsKey("0")){
+                    debug_print("** Items. 0 == " + txtRecordMap.get("0"));
+                }
+            }
+        };
+
+
+        p2p.setDnsSdResponseListeners(channel, serviceListener, txtRecordListener);
         startPeerDiscovery();
     }
 
@@ -244,7 +268,8 @@ public class WifiServiceSearcher {
 
         myServiceState = ServiceState.DiscoverService;
 
-        WifiP2pDnsSdServiceRequest request = WifiP2pDnsSdServiceRequest.newInstance(SERVICE_TYPE);
+        // looks that if I specify the SERVICE_TYPE here, then DnsSdTxtRecordListener will never be called
+        WifiP2pDnsSdServiceRequest request = WifiP2pDnsSdServiceRequest.newInstance();//SERVICE_TYPE);
         final Handler handler = new Handler();
         p2p.addServiceRequest(channel, request, new WifiP2pManager.ActionListener() {
 

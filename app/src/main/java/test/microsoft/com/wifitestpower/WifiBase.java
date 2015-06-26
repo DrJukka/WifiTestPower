@@ -13,6 +13,7 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -24,6 +25,7 @@ public class WifiBase implements WifiP2pManager.ChannelListener {
         public void WifiStateChanged(int state);
         public void gotPeersList(Collection<WifiP2pDevice> list);
         public void gotServicesList(List<ServiceItem> list);
+        public void gotDnsTXTRecordList(Map<String, String> mapping);
         //additional for testing only
         public void PeerStartError(int error);
         public void ServiceStartError(int error);
